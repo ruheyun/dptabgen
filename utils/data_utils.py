@@ -102,9 +102,9 @@ class DataWrapper:
                 self.col_dtype[col] = col_data.dtype
                 if self.num_encoder == "quantile":
                     self.num_normalizer[col] = QuantileTransformer(
-                        output_distribution='uniform',  # normal  uniform
+                        output_distribution='normal',  # normal  uniform
                         n_quantiles=max(min(len(col_data) // 30, 1000), 10),
-                        subsample=1e5,
+                        subsample=1000000000,
                         random_state=self.seed, )
                 elif self.num_encoder == "standard":
                     self.num_normalizer[col] = StandardScaler()

@@ -5,7 +5,7 @@ import os
 import argparse
 import tomli_w
 import torch
-from scripts.alb_encoding import process_wrapper
+from scripts.data_wrapper import process_wrapper
 # from scripts.train import train
 from scripts.train_dp import train
 from scripts.sample import sample

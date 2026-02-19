@@ -19,7 +19,7 @@ def train_catboost(
     delu.random.seed(seed)
 
     synthetic_data_path = os.path.normpath(exp_dir)
-    info = lib.load_json(os.path.join(data_path, 'info.json'))
+    info = lib.load_json(os.path.join(exp_dir, 'analogbit/info.json'))
     T = lib.Transformations(**T_dict)
 
     if change_val:
