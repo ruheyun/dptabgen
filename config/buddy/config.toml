@@ -1,0 +1,80 @@
+seed = 0
+exp_path = "expdir/buddy/"
+data_path = "data/buddy/"
+model_type = "mlp"
+num_numerical_features = 4
+device = 'cuda:0' # "cuda:0"
+
+[model_params]
+d_in = 23
+num_classes = 3
+is_y_cond = true
+
+[model_params.rtdl_params]
+d_layers = [
+    1024,
+    512,
+    512,
+    512,
+]
+dropout = 0.0
+
+[diffusion_params]
+num_timesteps = 1000
+gaussian_loss_type = "mse"
+
+[train.main]
+steps = 30000
+lr = 0.0004168262823315286
+weight_decay = 0.0
+batch_size = 1000
+
+[train.T]
+seed = 0
+normalization = "quantile"  # "quantile"
+num_nan_policy = "__none__"
+cat_nan_policy = "__none__"
+cat_min_frequency = "__none__"
+cat_encoding = 'analogbit'
+y_policy = "default"
+
+[sample]
+num_samples = 48000
+batch_size = 1000
+seed = 0
+
+[eval.type]
+eval_model = "catboost"
+eval_type = "synthetic"
+
+[eval.T]
+seed = 0
+normalization = "__none__"
+num_nan_policy = "__none__"
+cat_nan_policy = "__none__"
+cat_min_frequency = "__none__"
+cat_encoding = "__none__"
+y_policy = "default"
+
+[dp.common]
+enabled_stages = ['0']
+max_grad_norm = 0.7
+sigma = 1.5
+delta = 1e-5
+noise_multiplicity_K = 1
+
+[dp.'0']      # enabled_stages = ['0']，整个过程不加dp
+S = 0
+T = 1000
+
+[dp.'1']      # enabled_stages = ['1']，整个过程加dp
+S = 0
+T = 100
+
+[dp.'2']      # enabled_stages = ['0', '2']，二段式dp
+S = 0
+T = 0
+
+[dp.'3']      # enabled_stages = ['0', '2', '3']，三段式dp
+S = 0
+T = 0

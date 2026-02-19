@@ -1,0 +1,15 @@
+numpy==2.0.1
+pandas==2.2.3
+scikit-learn==1.6.0
+scipy==1.16.2
+rtdl==0.14.0.dev5
+delu==0.0.26
+icecream==2.1.8
+catboost==1.2.8
+tomli-w==1.2.0
+skorch==1.2.0
+optuna==4.5.0
+opacus==1.5.4
+tqdm==4.67.1
+rdt==1.18.2
+pytest==9.0.2

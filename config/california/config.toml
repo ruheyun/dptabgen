@@ -1,0 +1,87 @@
+seed = 0
+exp_path = "expdir/california/"
+data_path = "data/california/"
+num_numerical_features = 8
+model_type = "mlp"
+device = "cuda:0"
+
+[model_params]
+d_in = 9
+num_classes = 0
+is_y_cond = false
+
+[model_params.rtdl_params]
+d_layers = [
+    512,
+    256,
+    256,
+    256,
+    256,
+    128,
+]
+dropout = 0.0
+
+[diffusion_params]
+num_timesteps = 1000
+gaussian_loss_type = "mse"
+
+[train.main]
+steps = 30000
+lr = 0.0013275991211473216
+weight_decay = 0.0
+batch_size = 4096
+
+[train.T]
+seed = 0
+normalization = "quantile"
+num_nan_policy = "__none__"
+cat_nan_policy = "__none__"
+cat_min_frequency = "__none__"
+cat_encoding = 'analogbit'
+y_policy = "default"
+
+[sample]
+num_samples = 52800
+batch_size = 8192
+seed = 0
+
+[eval.type]
+eval_model = "catboost"
+eval_type = "synthetic"
+
+[eval.T]
+seed = 0
+normalization = "__none__"
+num_nan_policy = "__none__"
+cat_nan_policy = "__none__"
+cat_min_frequency = "__none__"
+cat_encoding = "__none__"
+y_policy = "default"
+
+[dp.common]
+enabled_stages = [
+    "0"
+]
+max_grad_norm = 1.0
+sigma = 2
+delta = 1e-05
+noise_multiplicity_K = 4
+
+[dp.0]
+steps = 30000
+S = 0
+T = 1000
+
+[dp.1]
+max_grad_norm = 1.5
+sigma = 2.5
+steps = 100
+S = 846
+T = 986
+
+[dp.2]
+max_grad_norm = 0.05
+sigma = 4
+steps = 5000
+S = 0
+T = 846
