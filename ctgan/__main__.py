@@ -2,8 +2,8 @@
 
 import argparse
 
-from dp_ctgan.data import read_csv, read_tsv, write_tsv
-from dp_ctgan.synthesizers.ctgan import CTGAN
+from ctgan.data import read_csv, read_tsv, write_tsv
+from ctgan.synthesizers.ctgan import CTGAN
 
 
 def _parse_args():

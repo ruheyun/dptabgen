@@ -9,9 +9,9 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
-from dp_ctgan.data_transformer import DataTransformer
-from dp_ctgan.synthesizers._utils import _set_device, validate_and_set_device
-from dp_ctgan.synthesizers.base import BaseSynthesizer, random_state
+from ctgan.data_transformer import DataTransformer
+from ctgan.synthesizers._utils import _set_device, validate_and_set_device
+from ctgan.synthesizers.base import BaseSynthesizer, random_state
 
 
 class Encoder(Module):

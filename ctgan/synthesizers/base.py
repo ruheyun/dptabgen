@@ -1,7 +1,7 @@
 import contextlib
 import numpy as np
 import torch
-from dp_ctgan.synthesizers._utils import _set_device
+from ctgan.synthesizers._utils import _set_device
 
 
 @contextlib.contextmanager

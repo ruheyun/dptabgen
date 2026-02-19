@@ -2,7 +2,7 @@ import lib
 import os
 import numpy as np
 import argparse
-from dp_ctgan import TVAE
+from ctgan import TVAE
 from pathlib import Path
 import torch
 import pickle

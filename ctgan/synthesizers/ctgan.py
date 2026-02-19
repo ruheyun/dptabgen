@@ -9,11 +9,11 @@ from torch import optim
 from torch.nn import BatchNorm1d, Dropout, LeakyReLU, Linear, Module, ReLU, Sequential, functional
 from tqdm import tqdm
 
-from dp_ctgan.data_sampler import DataSampler
-from dp_ctgan.data_transformer import DataTransformer
-from dp_ctgan.errors import InvalidDataError
-from dp_ctgan.synthesizers._utils import _set_device, validate_and_set_device
-from dp_ctgan.synthesizers.base import BaseSynthesizer, random_state
+from ctgan.data_sampler import DataSampler
+from ctgan.data_transformer import DataTransformer
+from ctgan.errors import InvalidDataError
+from ctgan.synthesizers._utils import _set_device, validate_and_set_device
+from ctgan.synthesizers.base import BaseSynthesizer, random_state
 
 
 class Discriminator(Module):
