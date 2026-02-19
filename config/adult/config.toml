@@ -38,7 +38,7 @@ normalization = "quantile"  # "__none__"  "quantile"
 num_nan_policy = "__none__"
 cat_nan_policy = "__none__"
 cat_min_frequency = "__none__"
-cat_encoding = 'alb'   # "__none__"  'onehot'  'alb: analogbit'
+cat_encoding = 'alb'   # "__none__"  'oht: onehot'  'alb: analogbit'
 y_policy = "default"
 
 [sample]
