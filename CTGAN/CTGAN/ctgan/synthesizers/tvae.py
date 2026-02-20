@@ -1,21 +1,18 @@
-"""TVAE module."""
+"""TVAESynthesizer module."""
 
 import numpy as np
-import pandas as pd
 import torch
 from torch.nn import Linear, Module, Parameter, ReLU, Sequential
 from torch.nn.functional import cross_entropy
 from torch.optim import Adam
 from torch.utils.data import DataLoader, TensorDataset
-from tqdm import tqdm
 
-from ctgan.data_transformer import DataTransformer
-from ctgan.synthesizers._utils import _set_device, validate_and_set_device
-from ctgan.synthesizers.base import BaseSynthesizer, random_state
+from ..data_transformer import DataTransformer
+from .base import BaseSynthesizer, random_state
 
 
 class Encoder(Module):
-    """Encoder for the TVAE.
+    """Encoder for the TVAESynthesizer.
 
     Args:
         data_dim (int):
@@ -31,7 +28,10 @@ class Encoder(Module):
         dim = data_dim
         seq = []
         for item in list(compress_dims):
-            seq += [Linear(dim, item), ReLU()]
+            seq += [
+                Linear(dim, item),
+                ReLU()
+            ]
             dim = item
 
         self.seq = Sequential(*seq)
@@ -48,7 +48,7 @@ class Encoder(Module):
 
 
 class Decoder(Module):
-    """Decoder for the TVAE.
+    """Decoder for the TVAESynthesizer.
 
     Args:
         embedding_dim (int):
@@ -85,17 +85,14 @@ def _loss_function(recon_x, x, sigmas, mu, logvar, output_info, factor):
                 ed = st + span_info.dim
                 std = sigmas[st]
                 eq = x[:, st] - torch.tanh(recon_x[:, st])
-                loss.append((eq**2 / 2 / (std**2)).sum())
+                loss.append((eq ** 2 / 2 / (std ** 2)).sum())
                 loss.append(torch.log(std) * x.size()[0])
                 st = ed
 
             else:
                 ed = st + span_info.dim
-                loss.append(
-                    cross_entropy(
-                        recon_x[:, st:ed], torch.argmax(x[:, st:ed], dim=-1), reduction='sum'
-                    )
-                )
+                loss.append(cross_entropy(
+                    recon_x[:, st:ed], torch.argmax(x[:, st:ed], dim=-1), reduction='sum'))
                 st = ed
 
     assert st == recon_x.size()[1]
@@ -103,8 +100,8 @@ def _loss_function(recon_x, x, sigmas, mu, logvar, output_info, factor):
     return sum(loss) * factor / x.size()[0], KLD / x.size()[0]
 
 
-class TVAE(BaseSynthesizer):
-    """TVAE."""
+class TVAESynthesizer(BaseSynthesizer):
+    """TVAESynthesizer."""
 
     def __init__(
         self,
@@ -116,22 +113,20 @@ class TVAE(BaseSynthesizer):
         epochs=300,
         lr=1e-3,
         loss_factor=2,
-        enable_gpu=True,
-        verbose=False,
-        cuda=None,
+        device="cuda:0"
     ):
         self.embedding_dim = embedding_dim
         self.compress_dims = compress_dims
         self.decompress_dims = decompress_dims
 
+        self.lr = lr
         self.l2scale = l2scale
         self.batch_size = batch_size
         self.loss_factor = loss_factor
         self.epochs = epochs
-        self.loss_values = pd.DataFrame(columns=['Epoch', 'Batch', 'Loss'])
-        self.verbose = verbose
-        self._device = validate_and_set_device(enable_gpu, cuda)
-        self._enable_gpu = cuda if cuda is not None else enable_gpu
+
+        
+        self._device = torch.device(device)
 
     @random_state
     def fit(self, train_data, discrete_columns=()):
@@ -149,68 +144,44 @@ class TVAE(BaseSynthesizer):
         self.transformer = DataTransformer()
         self.transformer.fit(train_data, discrete_columns)
         train_data = self.transformer.transform(train_data)
-        dataset = TensorDataset(torch.from_numpy(train_data.astype('float32')).to(self._device))
+        dataset = TensorDataset(torch.from_numpy(train_data.astype('float32')))
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True, drop_last=False)
 
         data_dim = self.transformer.output_dimensions
         encoder = Encoder(data_dim, self.compress_dims, self.embedding_dim).to(self._device)
         self.decoder = Decoder(self.embedding_dim, self.decompress_dims, data_dim).to(self._device)
         optimizerAE = Adam(
-            list(encoder.parameters()) + list(self.decoder.parameters()), weight_decay=self.l2scale
-        )
+            list(encoder.parameters()) + list(self.decoder.parameters()),
+            lr=self.lr,
+            weight_decay=self.l2scale)
+        data_iter = iter(loader) 
+        print('Training:')
+        for i in range(self.epochs):
+            try:
+                data = next(data_iter)
+            except:
+                data_iter = iter(loader)
+                data = next(data_iter)
 
-        self.loss_values = pd.DataFrame(columns=['Epoch', 'Batch', 'Loss'])
-        iterator = tqdm(range(self.epochs), disable=(not self.verbose))
-        if self.verbose:
-            iterator_description = 'Loss: {loss:.3f}'
-            iterator.set_description(iterator_description.format(loss=0))
-
-        for i in iterator:
-            loss_values = []
-            batch = []
-            for id_, data in enumerate(loader):
-                optimizerAE.zero_grad()
-                real = data[0].to(self._device)
-                mu, std, logvar = encoder(real)
-                eps = torch.randn_like(std)
-                emb = eps * std + mu
-                rec, sigmas = self.decoder(emb)
-                loss_1, loss_2 = _loss_function(
-                    rec,
-                    real,
-                    sigmas,
-                    mu,
-                    logvar,
-                    self.transformer.output_info_list,
-                    self.loss_factor,
-                )
-                loss = loss_1 + loss_2
-                loss.backward()
-                optimizerAE.step()
-                self.decoder.sigma.data.clamp_(0.01, 1.0)
-
-                batch.append(id_)
-                loss_values.append(loss.detach().cpu().item())
-
-            epoch_loss_df = pd.DataFrame({
-                'Epoch': [i] * len(batch),
-                'Batch': batch,
-                'Loss': loss_values,
-            })
-            if not self.loss_values.empty:
-                self.loss_values = pd.concat([self.loss_values, epoch_loss_df]).reset_index(
-                    drop=True
-                )
-            else:
-                self.loss_values = epoch_loss_df
-
-            if self.verbose:
-                iterator.set_description(
-                    iterator_description.format(loss=loss.detach().cpu().item())
-                )
+            optimizerAE.zero_grad()
+            real = data[0].to(self._device)
+            mu, std, logvar = encoder(real)
+            eps = torch.randn_like(std)
+            emb = eps * std + mu
+            rec, sigmas = self.decoder(emb)
+            loss_1, loss_2 = _loss_function(
+                rec, real, sigmas, mu, logvar,
+                self.transformer.output_info_list, self.loss_factor
+            )
+            loss = loss_1 + loss_2
+            loss.backward()
+            optimizerAE.step()
+            self.decoder.sigma.data.clamp_(0.01, 1.0)
+            if (i + 1) % 1000 == 0:
+                print(f"{i + 1}/{self.epochs} {loss}", flush=True)
 
     @random_state
-    def sample(self, samples):
+    def sample(self, samples, seed=0):
         """Sample data similar to the training data.
 
         Args:
@@ -220,12 +191,17 @@ class TVAE(BaseSynthesizer):
         Returns:
             numpy.ndarray or pandas.DataFrame
         """
-        self.decoder.eval()
 
-        steps = samples // self.batch_size + 1
+        torch.cuda.manual_seed(seed)
+        torch.manual_seed(seed)
+
+        self.decoder.eval()
+        
+        sample_batch_size = 8092
+        steps = samples // sample_batch_size + 1
         data = []
         for _ in range(steps):
-            mean = torch.zeros(self.batch_size, self.embedding_dim)
+            mean = torch.zeros(sample_batch_size, self.embedding_dim)
             std = mean + 1
             noise = torch.normal(mean=mean, std=std).to(self._device)
             fake, sigmas = self.decoder(noise)
@@ -237,7 +213,6 @@ class TVAE(BaseSynthesizer):
         return self.transformer.inverse_transform(data, sigmas.detach().cpu().numpy())
 
     def set_device(self, device):
-        """Set the `device` to be used ('GPU' or 'CPU')."""
-        enable_gpu = getattr(self, '_enable_gpu', True)
-        self._device = _set_device(enable_gpu, device)
+        """Set the `device` to be used ('GPU' or 'CPU)."""
+        self._device = device
         self.decoder.to(self._device)
